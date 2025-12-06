@@ -346,13 +346,21 @@ class TTSEngine:
             return False
     
     def _dividir_texto(self, texto: str, max_chars: int = None) -> List[str]:
-        """Divide el texto en fragmentos procesables"""
+        """
+        Divide el texto en fragmentos procesables.
+        
+        Prioridad de corte:
+        1. En puntos (., !, ?)
+        2. En comas (,)
+        3. En espacios (última opción)
+        """
         if max_chars is None:
             max_chars = self.MAX_CHARS_PER_CHUNK
         
         if len(texto) <= max_chars:
             return [texto.strip()]
         
+        # Paso 1: Dividir por oraciones completas (puntos, !, ?, saltos de línea)
         patron = r'(?<=[.!?])\s+|(?<=\n)'
         oraciones = re.split(patron, texto)
         oraciones = [s.strip() for s in oraciones if s.strip()]
@@ -362,29 +370,19 @@ class TTSEngine:
         
         for oracion in oraciones:
             if len(oracion) > max_chars:
+                # La oración es demasiado larga, hay que subdividirla
                 if fragmento_actual:
                     fragmentos.append(fragmento_actual.strip())
                     fragmento_actual = ""
                 
-                sub_partes = re.split(r'(?<=,)\s*', oracion)
-                for sub in sub_partes:
-                    if len(sub) > max_chars:
-                        palabras = sub.split()
-                        sub_fragmento = ""
-                        for palabra in palabras:
-                            if len(sub_fragmento) + len(palabra) + 1 <= max_chars:
-                                sub_fragmento += " " + palabra if sub_fragmento else palabra
-                            else:
-                                if sub_fragmento:
-                                    fragmentos.append(sub_fragmento.strip())
-                                sub_fragmento = palabra
-                        if sub_fragmento:
-                            fragmentos.append(sub_fragmento.strip())
-                    else:
-                        fragmentos.append(sub.strip())
+                # Subdividir la oración larga
+                sub_fragmentos = self._subdividir_oracion(oracion, max_chars)
+                fragmentos.extend(sub_fragmentos)
             elif len(fragmento_actual) + len(oracion) + 1 <= max_chars:
+                # La oración cabe en el fragmento actual
                 fragmento_actual += " " + oracion if fragmento_actual else oracion
             else:
+                # No cabe, guardar el fragmento actual y empezar uno nuevo
                 if fragmento_actual:
                     fragmentos.append(fragmento_actual.strip())
                 fragmento_actual = oracion
@@ -393,6 +391,70 @@ class TTSEngine:
             fragmentos.append(fragmento_actual.strip())
         
         return fragmentos
+    
+    def _subdividir_oracion(self, oracion: str, max_chars: int) -> List[str]:
+        """
+        Subdivide una oración larga en fragmentos más pequeños.
+        
+        Prioridad:
+        1. Cortar en la última coma antes del límite
+        2. Cortar en el último espacio antes del límite
+        """
+        fragmentos = []
+        texto_restante = oracion.strip()
+        
+        while len(texto_restante) > max_chars:
+            # Buscar el mejor punto de corte dentro del límite
+            punto_corte = self._encontrar_punto_corte(texto_restante, max_chars)
+            
+            if punto_corte > 0:
+                fragmento = texto_restante[:punto_corte].strip()
+                texto_restante = texto_restante[punto_corte:].strip()
+                
+                # Limpiar comas o espacios iniciales del resto
+                texto_restante = texto_restante.lstrip(', ')
+                
+                if fragmento:
+                    fragmentos.append(fragmento)
+            else:
+                # No se encontró punto de corte, forzar corte en max_chars
+                fragmento = texto_restante[:max_chars].strip()
+                texto_restante = texto_restante[max_chars:].strip()
+                if fragmento:
+                    fragmentos.append(fragmento)
+        
+        if texto_restante:
+            fragmentos.append(texto_restante)
+        
+        return fragmentos
+    
+    def _encontrar_punto_corte(self, texto: str, max_chars: int) -> int:
+        """
+        Encuentra el mejor punto de corte para un texto.
+        
+        Prioridad:
+        1. Última coma antes del límite
+        2. Último espacio antes del límite
+        3. En el límite exacto (si no hay alternativa)
+        
+        Returns:
+            Posición del punto de corte (incluye el carácter de corte)
+        """
+        # Buscar texto hasta el límite
+        texto_limite = texto[:max_chars]
+        
+        # Prioridad 1: Buscar la última coma
+        ultima_coma = texto_limite.rfind(',')
+        if ultima_coma > max_chars * 0.3:  # Solo si está después del 30% del texto
+            return ultima_coma + 1  # Incluir la coma en el fragmento
+        
+        # Prioridad 2: Buscar el último espacio
+        ultimo_espacio = texto_limite.rfind(' ')
+        if ultimo_espacio > max_chars * 0.3:  # Solo si está después del 30% del texto
+            return ultimo_espacio
+        
+        # Prioridad 3: Cortar en el límite exacto
+        return max_chars
     
     def _sintetizar_fragmento(self, texto: str, gpt_cond_latent, speaker_embedding) -> Optional[np.ndarray]:
         """
@@ -1690,6 +1752,14 @@ class LibraryTab(ctk.CTkFrame):
         super().__init__(parent)
         
         self.history_manager = history_manager
+        
+        # Estado de reproducción
+        self._current_playing_card = None
+        self._playback_thread = None
+        self._stop_playback = False
+        self._playback_start_time = 0
+        self._current_duration = 0
+        
         self.setup_ui()
         self.refresh_history()
     
@@ -1772,17 +1842,46 @@ class LibraryTab(ctk.CTkFrame):
             justify="left"
         ).pack(padx=10, pady=10, anchor="w")
         
+        # Barra de progreso de reproducción
+        progress_frame = ctk.CTkFrame(card, fg_color="transparent")
+        progress_frame.grid(row=2, column=0, columnspan=2, padx=15, pady=(5, 0), sticky="ew")
+        progress_frame.grid_columnconfigure(1, weight=1)
+        
+        time_label = ctk.CTkLabel(progress_frame, text="0:00 / 0:00", font=("", 11))
+        time_label.grid(row=0, column=0, padx=(0, 10), sticky="w")
+        
+        progress_bar = ctk.CTkProgressBar(progress_frame, height=8)
+        progress_bar.grid(row=0, column=1, sticky="ew")
+        progress_bar.set(0)
+        
+        # Guardar referencias en el card
+        card.progress_bar = progress_bar
+        card.time_label = time_label
+        card.entry = entry
+        
         # Botones
         btn_frame = ctk.CTkFrame(card, fg_color="transparent")
-        btn_frame.grid(row=2, column=0, columnspan=2, padx=15, pady=(5, 15), sticky="e")
+        btn_frame.grid(row=3, column=0, columnspan=2, padx=15, pady=(5, 15), sticky="e")
         
         play_btn = ctk.CTkButton(
             btn_frame,
             text="▶ Reproducir",
             width=100,
-            command=lambda e=entry: self.play_audio(e)
+            command=lambda c=card, e=entry: self.play_audio(e, c)
         )
         play_btn.pack(side="left", padx=5)
+        card.play_btn = play_btn
+        
+        stop_btn = ctk.CTkButton(
+            btn_frame,
+            text="⏹ Parar",
+            width=80,
+            fg_color="gray40",
+            state="disabled",
+            command=lambda c=card: self.stop_audio(c)
+        )
+        stop_btn.pack(side="left", padx=5)
+        card.stop_btn = stop_btn
         
         delete_btn = ctk.CTkButton(
             btn_frame,
@@ -1794,22 +1893,103 @@ class LibraryTab(ctk.CTkFrame):
         )
         delete_btn.pack(side="left", padx=5)
     
-    def play_audio(self, entry: dict):
-        """Reproduce un audio del historial"""
+    def play_audio(self, entry: dict, card=None):
+        """Reproduce un audio del historial con progreso"""
         audio_path = entry["audio_path"]
         
         if not Path(audio_path).exists():
             messagebox.showerror("Error", "El archivo de audio no existe")
             return
         
+        # Si ya hay algo reproduciéndose, detenerlo
+        if self._current_playing_card is not None:
+            self.stop_audio(self._current_playing_card)
+        
         try:
             import soundfile as sf
             import sounddevice as sd
+            import time
             
             data, samplerate = sf.read(audio_path)
-            sd.play(data, samplerate)
+            duration = len(data) / samplerate
+            
+            # Configurar estado
+            self._stop_playback = False
+            self._current_playing_card = card
+            self._current_duration = duration
+            
+            if card:
+                card.play_btn.configure(state="disabled")
+                card.stop_btn.configure(state="normal")
+                
+                # Formatear duración total
+                total_min = int(duration // 60)
+                total_sec = int(duration % 60)
+                card.time_label.configure(text=f"0:00 / {total_min}:{total_sec:02d}")
+            
+            def _playback_worker():
+                try:
+                    sd.play(data, samplerate)
+                    start_time = time.time()
+                    
+                    while sd.get_stream().active and not self._stop_playback:
+                        elapsed = time.time() - start_time
+                        progress = min(elapsed / duration, 1.0)
+                        
+                        if card:
+                            # Actualizar progreso en el hilo principal
+                            self.after(0, lambda p=progress, e=elapsed: self._update_progress(card, p, e, duration))
+                        
+                        time.sleep(0.1)
+                    
+                    if self._stop_playback:
+                        sd.stop()
+                    
+                    # Limpiar estado
+                    self.after(0, lambda: self._playback_finished(card))
+                    
+                except Exception as e:
+                    print(f"Error en reproducción: {e}")
+                    self.after(0, lambda: self._playback_finished(card))
+            
+            self._playback_thread = threading.Thread(target=_playback_worker, daemon=True)
+            self._playback_thread.start()
+            
         except Exception as e:
             messagebox.showerror("Error", f"Error reproduciendo: {e}")
+    
+    def _update_progress(self, card, progress: float, elapsed: float, duration: float):
+        """Actualiza la barra de progreso y el tiempo"""
+        if card and card.winfo_exists():
+            card.progress_bar.set(progress)
+            
+            elapsed_min = int(elapsed // 60)
+            elapsed_sec = int(elapsed % 60)
+            total_min = int(duration // 60)
+            total_sec = int(duration % 60)
+            
+            card.time_label.configure(text=f"{elapsed_min}:{elapsed_sec:02d} / {total_min}:{total_sec:02d}")
+    
+    def _playback_finished(self, card):
+        """Callback cuando la reproducción termina"""
+        if card and card.winfo_exists():
+            card.progress_bar.set(0)
+            card.time_label.configure(text="0:00 / 0:00")
+            card.play_btn.configure(state="normal")
+            card.stop_btn.configure(state="disabled")
+        
+        self._current_playing_card = None
+        self._stop_playback = False
+    
+    def stop_audio(self, card=None):
+        """Detiene la reproducción actual"""
+        import sounddevice as sd
+        
+        self._stop_playback = True
+        sd.stop()
+        
+        if card:
+            self._playback_finished(card)
     
     def delete_entry(self, entry: dict):
         """Elimina una entrada del historial"""
