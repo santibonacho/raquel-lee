@@ -1,0 +1,33 @@
+# TTS Studio - Dependencias optimizadas
+
+# GUI
+customtkinter>=5.2.0
+
+# TTS Engine
+TTS>=0.22.0
+torch>=2.0.0
+torchaudio>=2.0.0
+torchvision
+torchaudio
+torchcodec  # Requerido para cargar audio en XTTS v2
+
+transformers>=4.40.0,<4.41.0 # Versión compatible con TTS
+
+# Audio
+sounddevice>=0.4.6
+soundfile>=0.12.1
+pydub>=0.25.1
+
+# PDF Processing
+PyMuPDF>=1.23.0
+
+# Word Processing
+python-docx>=1.1.0
+
+# OCR (requires tesseract installed: brew install tesseract)
+pytesseract>=0.3.10
+Pillow>=10.0.0
+
+# Utilities
+numpy>=1.24.0
+

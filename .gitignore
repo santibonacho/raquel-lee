@@ -1,0 +1,12 @@
+*.wav
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+.env
+logs/
+*.log
+data/
+output/

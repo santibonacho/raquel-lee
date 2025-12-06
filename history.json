@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "date": "2025-12-06T18:26:21.365805",
+    "voice": "Santi",
+    "text_preview": "Hola Soy Santi el amigo de los niños",
+    "full_text": "Hola Soy Santi el amigo de los niños",
+    "audio_path": "/Users/sgarciabonacho/personal/raquel/third/assets/output/Santi_20251206_182611.wav",
+    "duration": 2.18
+  },
+  {
+    "id": 2,
+    "date": "2025-12-06T18:32:15.830528",
+    "voice": "Santi",
+    "text_preview": "No te quedes inmóvil\t\t\nal borde del camino\t\t\nno congeles el júbilo\t\t\nno quieras con desgana\t\t\nno te ...",
+    "full_text": "No te quedes inmóvil\t\t\nal borde del camino\t\t\nno congeles el júbilo\t\t\nno quieras con desgana\t\t\nno te salves ahora\t\t\nni nunca\t\t\nno te salves\nno te llenes de calma\t\t\nno reserves del mundo\t\t\nsólo un rincón tranquilo\t\t\nno dejes caer los párpados\t\t\npesados como juicios\t\t\nno te quedes sin labios\t\t\nno te duermas sin sueño\t\t\nno te pienses sin sangre\t\t\nno te juzgues sin tiempo\t\t\n\npero si\t\t\npese a todo no puedes evitarlo\ny congelas el júbilo\t\t\ny quieres con desgana\t\t\ny te salvas ahora\t\t\ny te llenas de calma\t\t\ny reservas del mundo\t\t\nsólo un rincón tranquilo\t\t\ny dejas caer los párpados\t\t\npesados como juicios\t\t\ny te secas sin labios\t\t\ny te duermes sin sueño\t\t\ny te piensas sin sangre\t\t\ny te juzgas sin tiempo\t\t\ny te quedas inmóvil\t\t\nal borde del camino\t\t\ny te salvas\t\t\nentonces\nno te quedes conmigo.",
+    "audio_path": "/Users/sgarciabonacho/personal/raquel/third/assets/output/Santi_20251206_182643.wav",
+    "duration": 53.47
+  },
+  {
+    "id": 3,
+    "date": "2025-12-06T20:47:29.372651",
+    "voice": "Raquel",
+    "text_preview": "No te quedes inmóvil\t\t\nal borde del camino\t\t\nno congeles el júbilo\t\t\nno quieras con desgana\t\t\nno te ...",
+    "full_text": "No te quedes inmóvil\t\t\nal borde del camino\t\t\nno congeles el júbilo\t\t\nno quieras con desgana\t\t\nno te salves ahora\t\t\nni nunca\t\t\nno te salves\nno te llenes de calma\t\t\nno reserves del mundo\t\t\nsólo un rincón tranquilo\t\t\nno dejes caer los párpados\t\t\npesados como juicios\t\t\nno te quedes sin labios\t\t\nno te duermas sin sueño\t\t\nno te pienses sin sangre\t\t\nno te juzgues sin tiempo\t\t\n\npero si\t\t\npese a todo no puedes evitarlo\ny congelas el júbilo\t\t\ny quieres con desgana\t\t\ny te salvas ahora\t\t\ny te llenas de calma\t\t\ny reservas del mundo\t\t\nsólo un rincón tranquilo\t\t\ny dejas caer los párpados\t\t\npesados como juicios\t\t\ny te secas sin labios\t\t\ny te duermes sin sueño\t\t\ny te piensas sin sangre\t\t\ny te juzgas sin tiempo\t\t\ny te quedas inmóvil\t\t\nal borde del camino\t\t\ny te salvas\t\t\nentonces\nno te quedes conmigo.",
+    "audio_path": "/Users/sgarciabonacho/personal/raquel/third/assets/output/Raquel_20251206_204501.wav",
+    "duration": 47.15
+  }
+]
