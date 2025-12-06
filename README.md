@@ -7,9 +7,13 @@ Una aplicación de escritorio profesional para convertir texto a voz utilizando 
 - **Interfaz moderna** con 3 pestañas: Estudio, Mis Voces y Biblioteca
 - **Clonación de voz** usando XTTS v2
 - **Importación de archivos**: TXT, PDF, DOCX e imágenes (OCR)
-- **Gestor de voces**: Graba o sube muestras de audio para crear voces personalizadas
-- **Historial completo** de todas las generaciones
+- **Gestor de voces**: Graba o sube muestras de audio (WAV, MP3, OPUS) para crear voces personalizadas
+- **Duración configurable** de grabación (6-15 segundos mediante slider)
+- **Historial completo** de todas las generaciones con reproducción y barra de progreso
+- **Control de reproducción**: Botón de parar y visualización del tiempo transcurrido
+- **División inteligente de texto**: Corta en puntos, comas o espacios para resultados naturales
 - **Optimización hardware**: Usa MPS en macOS, CUDA en Windows/Linux
+- **Cacheo de embeddings**: Los latentes de voz se cachean para acelerar generaciones consecutivas
 - **Interfaz no bloqueante**: Todas las operaciones pesadas en hilos separados
 
 ## 📋 Requisitos Previos
@@ -105,20 +109,23 @@ third/
 
 1. **Escribe un nombre** para la voz (ej: "Narrador Español")
 2. **Añade una descripción** (opcional)
-3. **Proporciona audio de referencia**:
-   - **Grabar**: Graba 6 segundos desde tu micrófono
-   - **Subir WAV**: Sube un archivo WAV existente
-4. **Haz clic en "GUARDAR VOZ"**
+3. **Configura la duración** de la muestra con el slider (6-15 segundos)
+4. **Proporciona audio de referencia**:
+   - **Grabar**: Graba desde tu micrófono (duración configurable)
+   - **Subir Audio**: Sube un archivo WAV, MP3 u OPUS existente
+5. **Haz clic en "GUARDAR VOZ"**
 
 **Consejos para mejores resultados**:
-- Usa grabaciones de 6-15 segundos
+- Usa grabaciones de 6-15 segundos (ajustable con el slider)
 - Audio limpio sin ruido de fondo
 - Voz clara y natural
-- Formato WAV a 22050Hz mono (ideal)
+- Los archivos MP3 y OPUS se convierten automáticamente a WAV
 
 ### Pestaña "Biblioteca" - Historial
 
 - **Reproduce** cualquier audio generado anteriormente
+- **Barra de progreso** muestra el avance de la reproducción con tiempo transcurrido
+- **Botón Parar** para detener la reproducción en cualquier momento
 - **Elimina** entradas individuales (también borra el archivo)
 - El historial se guarda automáticamente en `history.json`
 
@@ -138,12 +145,12 @@ self.tts_engine.generate_audio(
 )
 ```
 
-### Duración de grabación
+### Límite de caracteres por fragmento
 
-Cambia la duración de grabación en `VoicesTab.__init__`:
+El texto se divide automáticamente en fragmentos para el modelo. El límite por defecto es 200 caracteres. Para cambiarlo, modifica en `TTSEngine`:
 
 ```python
-self.recorder = AudioRecorder(duration=10)  # 10 segundos en vez de 6
+MAX_CHARS_PER_CHUNK = 250  # Aumentar o disminuir según necesidad
 ```
 
 ## 🐛 Solución de Problemas
@@ -180,8 +187,10 @@ pip install --upgrade customtkinter
 | customtkinter | Interfaz gráfica moderna |
 | TTS | Motor XTTS v2 de Coqui |
 | torch | Backend de ML |
-| sounddevice | Grabación de audio |
-| soundfile | Lectura/escritura de audio |
+| transformers | Dependencia de TTS (versión 4.40.x) |
+| sounddevice | Grabación y reproducción de audio |
+| soundfile | Lectura/escritura de archivos de audio |
+| pydub | Conversión de formatos de audio (MP3, OPUS → WAV) |
 | PyMuPDF | Extracción de texto de PDFs |
 | python-docx | Extracción de texto de Word |
 | pytesseract | OCR para imágenes |
